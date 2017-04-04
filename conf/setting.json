@@ -1,0 +1,8 @@
+{
+    // 默认环境，系统启动时，复制一份系统的host文件
+    "default_env": "default",
+
+    // 工作目录
+    "work_path": "~/.host"
+
+}
