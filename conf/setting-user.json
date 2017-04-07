@@ -1,0 +1,8 @@
+{
+  //  远程环境数组
+  "remote_env": [],
+  //  是否开启自动备份，如果开启，在切换环境前，会备份当前hosts文件
+  "auto_backup": false,
+  //  备份数量，最早的将被删除
+  "backup_limit_count": 10
+}

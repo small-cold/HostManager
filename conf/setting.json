@@ -1,8 +1,10 @@
 {
-    // 默认环境，系统启动时，复制一份系统的host文件
-    "default_env": "default",
-
-    // 工作目录
-    "work_path": "~/.host"
-
+  // 默认环境，系统启动时，复制一份系统的host文件
+  "default_env": "default",
+  // 工作目录
+  "work_path": "~/.host",
+  //  环境目录
+  "env_path" : "env",
+  //  备份目录
+  "backup_path" : "backup"
 }
