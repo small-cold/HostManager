@@ -4,5 +4,7 @@
   //  是否开启自动备份，如果开启，在切换环境前，会备份当前hosts文件
   "auto_backup": false,
   //  备份数量，最早的将被删除
-  "backup_limit_count": 10
+  "backup_limit_count": 10,
+  // 通用配置文件
+  "common_hosts": ["common"]
 }
