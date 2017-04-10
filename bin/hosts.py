@@ -116,12 +116,19 @@ def host_to(host, ip='127.0.0.1'):
                 continue
             # 要修改的地址不在该行
             if host in attrs[1:]:
+                if len(attrs) == 2 and edited:
+                    continue
                 # 该配置存在，更换配置，将原来的注释
                 if attrs[0] != ip:
                     if line.startswith('#'):
                         content += line
                     else:
                         content += '#' + line
+                        content += ip + '\t\t'
+                        for host in attrs[1:]:
+                            content += host + '\t\t'
+                        content += '\n'
+                        edited = True
                 else:
                     if not line.startswith('#'):
                         print('该配置已经存在', line)

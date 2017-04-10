@@ -92,7 +92,7 @@ def main():
         switch_by_num(options.switch, options.ignore)
 
     if options.local:
-        host_to(options.local, options.local)
+        host_to(options.local, options.ip)
 
     if options.show_list:
         show_list('可选环境如下', os.path.join(cfs.work_path, cfs.env_path)),
