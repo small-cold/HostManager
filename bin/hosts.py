@@ -125,8 +125,8 @@ def host_to(host, ip='127.0.0.1'):
                     else:
                         content += '#' + line
                         content += ip + '\t\t'
-                        for host in attrs[1:]:
-                            content += host + '\t\t'
+                        for host_temp in attrs[1:]:
+                            content += host_temp + '\t\t'
                         content += '\n'
                         edited = True
                 else:
@@ -135,8 +135,8 @@ def host_to(host, ip='127.0.0.1'):
                         return
                     else:
                         content += ip + '\t\t'
-                        for host in attrs[1:]:
-                            content += host + '\t\t'
+                        for host_temp in attrs[1:]:
+                            content += host_temp + '\t\t'
                         content += '\n'
                         edited = True
             else:

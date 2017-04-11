@@ -63,7 +63,7 @@ def main():
     parser.add_option("-d", "--download", action="store_true", default=False,
                       dest="download", help="下载环境", metavar="FILE")
     # 本地环境列表
-    parser.add_option("-l", "--local", action="store", dest="local", default=True,
+    parser.add_option("-l", "--local", action="store", dest="local",
                       help="切换域名至本地")
     parser.add_option("--ip", action="store", dest="ip", default='127.0.0.1',
                       help="指定IP地址")
