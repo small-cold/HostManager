@@ -86,7 +86,7 @@ class Host(object):
         line = line.strip()
         if line.startswith('#') and not DOMAIN_RE.search(line):
             self.comment = line
-        elif DOMAIN_RE.search(line):
+        elif IP_RE.search(line):
             # 第一个是ip，后面是域名
             attrs = DOMAIN_RE.findall(line)
             if len(attrs) >= 2:
@@ -109,6 +109,8 @@ class Host(object):
                 else:
                     self.get_domain().remove(domain)
                     return [Host(domain, ip), self]
+            else:
+                self.enable = True
         return [self]
 
     def get_ip(self):
