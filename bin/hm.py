@@ -12,7 +12,7 @@ from optparse import OptionParser, OptionGroup
 
 import sys
 
-from hosts import backup, switch_by_num, host_to, get_config, IP_RE, DOMAIN_RE, Host
+from hosts import backup, switch_by_num, host_to, IP_RE, DOMAIN_RE, get_host_list_by_domain
 from remote import download_remote_env
 from configs import configs as cfs
 
@@ -107,26 +107,25 @@ def main():
             switch_by_num(int(options.switch), options.ignore)
         elif DOMAIN_RE.match(options.switch) and not options.ip:
             # 列出可选IP，默认为本地
-            ips = get_config(options.switch)
-            if len(ips) == 0:
+            host_list = get_host_list_by_domain(options.switch)
+            if len(host_list) == 0:
                 print("请输入IP，不输入为本地IP")
             else:
                 ip_i = 0
-                for ip in ips:
-                    msg = str(ip_i) + "：" + ip
-                    if ip_i == 0:
-                        msg += '[当前]'
+                for host in host_list:
+                    msg = str(ip_i) + "：" + host.get_ip()
+                    if host.get_enable():
+                        msg += '[enable]'
                     print(msg)
                     ip_i += 1
                 print("请选择IP，或者输入自定义IP，不输入为本地IP")
-
-            input_ip = sys.stdin.readline().strip()
-            if not input_ip or '' == input_ip:
+            input_ip = sys.stdin.readline()
+            if not input_ip or re.match('[\s ]+', input_ip):
                 host_to(options.switch)
             elif IP_RE.match(input_ip):
                 host_to(options.switch, input_ip)
-            elif re.match(r'^[0-9]+$', input_ip) and int(input_ip) < len(ips):
-                host_to(options.switch, ips[int(input_ip)])
+            elif re.match(r'^[0-9]+$', input_ip) and int(input_ip) < len(host_list):
+                host_to(options.switch, host_list[int(input_ip)].get_ip())
             else:
                 raise Exception('参数错误，请输入可选IP序号或者正确的IP')
 
@@ -136,10 +135,10 @@ def main():
             raise Exception('参数错误，请输入可选环境序号或者域名')
 
     if options.current:
-        ips = get_config(options.current)
+        ips = get_host_list_by_domain(options.current)
         ip_i = 0
         for ip in ips:
-            print(str(ip_i) + "：" + ip)
+            print(str(ip_i) + "：" + ip.get_ip())
             ip_i += 1
 
     if options.download:
@@ -153,3 +152,4 @@ if __name__ == '__main__':
     #     main()
     # except Exception as e:
     #     print(e)
+    #     logging.info(e)

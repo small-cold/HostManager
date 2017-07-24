@@ -15,12 +15,11 @@ IP_RE = re.compile(r'(?<![\\.\d])(?:\d{1,3}\.){3}\d{1,3}(?![\\.\d])')
 hosts 解析实体
 '''
 
-
 class Host(object):
     def __init__(self, domain=None, ip=None, enable=True):
+        self.enable = enable
         self.ip = ip
         self.domain = domain
-        self.enable = enable
         self.comment = None
 
     def __setattr__(self, key, value):
@@ -35,6 +34,7 @@ class Host(object):
                 self._domain = value
             elif isinstance(value, str):
                 self._domain = DOMAIN_RE.findall(value)
+                self.enable = value
             elif isinstance(value, list):
                 self._domain = value
             elif isinstance(value, tuple):
@@ -57,11 +57,13 @@ class Host(object):
         result = ''
         if self.comment is not None:
             result = self.comment + "\n"
-        if self._ip is not None and self._domain is not None:
+        if self._ip is not None and '' != self.get_ip().strip() and self._domain is not None:
+            if not self.get_enable():
+                result += '# '
             result += self._ip + '\t\t' + self._domain[0]
             if len(self._domain) >= 2:
                 for dm in self._domain[1:]:
-                    result += '\t\t' + dm
+                    result += '  ' + dm
             result += '\n'
         return result
 
@@ -69,12 +71,12 @@ class Host(object):
         if not isinstance(other, Host):
             return False
         if self.get_domain() is not None and other.get_domain() is not None:
-            domain_eq = set(self.get_domain()).issubset(set(other.get_domain())) \
+            domain_eq = self.get_domain() == other.get_domain() or set(self.get_domain()).issubset(set(other.get_domain())) \
                         or set(other.get_domain()).issubset(set(self.get_domain()))
         else:
             domain_eq = self.get_domain() == other.get_domain()
 
-        return domain_eq and self.get_ip() == other.get_ip() and self.get_enable() == other.get_domain()
+        return domain_eq and self.get_ip() == other.get_ip() and self.get_enable() == other.get_enable()
 
     def init(self, line):
         if not isinstance(line, str):
@@ -82,9 +84,9 @@ class Host(object):
         if line is None:
             raise Exception('line is not allow None or blank')
         line = line.strip()
-        if line.startswith('#') and not IP_RE.match(line):
+        if line.startswith('#') and not DOMAIN_RE.search(line):
             self.comment = line
-        elif IP_RE.match(line):
+        elif DOMAIN_RE.search(line):
             # 第一个是ip，后面是域名
             attrs = DOMAIN_RE.findall(line)
             if len(attrs) >= 2:
@@ -98,18 +100,16 @@ class Host(object):
         return self
 
     def switch(self, domain, ip):
-        if self._ip is None or self._domain is None:
-            return self
-        if len(self._domain) > 0 and domain in self._domain:
-            if ip == self._ip and self._enable:
-                raise Exception('已存在该配置：' + ip + ' ' + domain)
-            elif ip != self._ip:
-                if len(self._domain) == 1:
-                    self._enable = not self._enable
+        if self.get_domain() is None or self.get_ip() is None:
+            return [self]
+        if len(self.get_domain()) > 0 and domain in self.get_domain():
+            if ip != self.get_ip():
+                if len(self.get_domain()) == 1:
+                    self.enable = not self._enable
                 else:
-                    self._domain.remove(domain)
-                    return [Host(domain, ip, not self._enable), self]
-        return self
+                    self.get_domain().remove(domain)
+                    return [Host(domain, ip), self]
+        return [self]
 
     def get_ip(self):
         return self._ip
@@ -211,50 +211,48 @@ def switch(source_path, title='新环境', ignores=[]):
     flush_hosts()
 
 
-def get_config(domain, path=SYS_HOSTS_PATH):
-    ips = []
+def get_host_list_by_domain(domain, path=SYS_HOSTS_PATH):
+    return [host for host in get_host_list(path) if host.get_domain() is not None and domain in host.get_domain()]
+
+
+def get_host_list(path=SYS_HOSTS_PATH):
+    host_list = []
     with open(path, 'r') as f:
         while True:
             line = f.readline()
             if not line:
                 break
-            attrs = DOMAIN_RE.findall(line)
-            if not attrs or len(attrs) == 0 or domain not in attrs[1:]:
-                continue
-            if line.startswith("#"):
-                ips.append(attrs[0])
-            else:
-                ips.insert(0, attrs[0])
-    return ips
+            host = Host().init(line)
+            host_list.append(host)
+    return host_list
 
 
-def host_to(domain, ip='127.0.0.1'):
+def host_to(domain, ip='127.0.0.1', path=SYS_HOSTS_PATH):
     """
-    将当期环境切换到本地
+    将当期环境切换到指定IP
     :param ip:
     :param domain:
     :return:
     """
+    if domain is None:
+        raise Exception('域名不能为 None')
+    domain = domain.strip()
+    ip = ip.strip()
     if not domain:
         return
-    host_list = []
-    with open(SYS_HOSTS_PATH, 'r') as f:
-        while True:
-            line = f.readline()
-            if not line:
-                break
-            host = Host().init(line)
-            result = host.switch(domain, ip)
-            if isinstance(result, Host):
-                host_list.append(host)
-            elif isinstance(result, list):
-                for r in result:
-                    host_list.append(r)
+    host_list = get_host_list(path)
+    new_host_list = []
+    for host in host_list:
+        # result = host.switch(domain, ip)
+        # for r in result:
+            # print('host result is ', r)
+        new_host_list.extend(host.switch(domain, ip))
+
     dest_host = Host(domain, ip)
-    if dest_host not in host_list:
-        host_list.append(dest_host)
+    if dest_host not in new_host_list:
+        new_host_list.append(dest_host)
     with open(SYS_HOSTS_PATH, 'w') as f:
-        for host in host_list:
+        for host in new_host_list:
             f.write(str(host))
 
 
@@ -270,6 +268,7 @@ if __name__ == '__main__':
     # switch_by_num()
     # host_to('baidu.com')
     # host_to('m.baidu.com', '123.123.1.1')
+    print(Host('baidu.com', '11.11.11.11') in [Host('baidu.com', '11.11.11.11')])
     print("", Host('baidu.com', '11.11.11.11') == Host('m.baidu.com  baidu.com', '11.11.11.11'))
     # host_list = []
     # hosts_content = ''
@@ -281,10 +280,13 @@ if __name__ == '__main__':
     #         host = Host().init(lineTemp)
     #         host_list.append(host)
     #         print('对比一行结果：', lineTemp, host, '--------------------', sep="\n")
-    # host_temp = Host('11.11.11.11', 'm.baidu.com\t\twww.baidu.com')
-    # result = host_temp.switch('m.baidu.com', '11.11.11.11')
-    # if isinstance(result, Host):
-    #     print(result)
-    # elif isinstance(result, list):
-    #     for h in result:
-    #         print(h)
+    host_temp = Host().init('#11.11.11.11 m.baidu.com\t\twww.baidu.com')
+    print(host_temp)
+    print('-------')
+    result = host_temp.switch('m.baidu.com', '11.11.11.12')
+    print(len(result))
+    if isinstance(result, list):
+        for h in result:
+            print(h)
+    if Host('m.baidu.com', '11.11.11.12') not in result:
+        print(Host('m.baidu.com', '11.11.11.12'))
