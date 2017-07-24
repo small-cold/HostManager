@@ -26,6 +26,9 @@ def show_list(title, path):
     """
     print(title)
     files = [f for f in os.listdir(path) if os.path.isdir(path)]
+    if len(files) == 0:
+        print("无")
+        return
     index = 0
     for env in files:
         if str(env).startswith('.'):
@@ -55,7 +58,7 @@ def main():
 
     # 切换环境
     parser.add_option("-s", "--switch", action="store", type='string', default='',
-                      dest="switch", help="切换环境，需要管理员权限，默认会备份当前host")
+                      dest="switch", help="切换环境，需要管理员权限，默认不会备份当前host")
 
     parser.add_option('-i', '--ignore', action='store', type='string', default='',
                       dest="ignore", help="切换环境，需要忽略的内容")
@@ -71,10 +74,11 @@ def main():
     parser.add_option("--ip", action="store", dest="ip", default=None,
                       help="指定IP地址")
     # 版本
-    parser.add_option("-V", "--version", action="store_false", dest="verbose", default=False,
+    parser.add_option("-V", "--version", action="store_true", dest="verbose", default=False,
                       help="显示版本")
+
     parser.add_option("--config", action="store_true", dest="show_configs", default=False,
-                      help="显示版本")
+                      help="显示配置信息")
     (options, args) = parser.parse_args()
     # print(options, args)
     if options.verbose:
@@ -82,6 +86,7 @@ def main():
 
     # 备份系统环境
     if options.show_configs:
+        print('Host Manage 版本为', cfs.version)
         print('配置信息：')
         for k, v in cfs.items():
             print('   ', k, '=', v)
