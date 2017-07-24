@@ -8,6 +8,9 @@ from configs import configs as cfs
 
 SYS_HOSTS_PATH = '/etc/hosts'
 
+DOMAIN_RE = re.compile(r'[\w\\.-]+')
+IP_RE = re.compile(r'[0-9]{1, 3}\\.[0-9]{1, 3}\\.[0-9]{1, 3}\\.[0-9]{1, 3}')
+
 
 def backup(file_name=None, backup_path=None):
     """
@@ -56,9 +59,10 @@ def switch_by_num(index=0, ignore=''):
     :return:
     """
     path = os.path.join(cfs.work_path, cfs.env_path)
-    files = [f for f in os.listdir(path) if os.path.isdir(path)]
+    files = [f for f in os.listdir(path) if os.path.isdir(path) and not f.startswith(".")]
     file_name = files[index]
-    switch(os.path.join(path, file_name), title=file_name, ignores=ignore.split(','))
+    switch(os.path.join(path, file_name),
+           title=file_name, ignores=ignore.split(','))
 
 
 def switch(source_path, title='新环境', ignores=[]):
@@ -67,7 +71,6 @@ def switch(source_path, title='新环境', ignores=[]):
     """
     if not source_path:
         raise Exception('路径不能为空')
-    print(os.path.exists(source_path), os.path.isdir(source_path))
     if not os.path.exists(source_path) or os.path.isdir(source_path):
         raise Exception('文件不存在')
     content = get_common_hosts()
@@ -93,6 +96,23 @@ def switch(source_path, title='新环境', ignores=[]):
     flush_hosts()
 
 
+def get_config(domain, path=SYS_HOSTS_PATH):
+    ips = []
+    with open(path, 'r') as f:
+        while True:
+            line = f.readline()
+            if not line:
+                break
+            attrs = DOMAIN_RE.findall(line)
+            if not attrs or len(attrs) == 0 or domain not in attrs[1:]:
+                continue
+            if line.startswith("#"):
+                ips.append(attrs[0])
+            else:
+                ips.insert(0, attrs[0])
+    return ips
+
+
 def host_to(host, ip='127.0.0.1'):
     """
     将当期环境切换到本地
@@ -110,7 +130,7 @@ def host_to(host, ip='127.0.0.1'):
             if not line:
                 break
             # 第一个是ip，后面是域名
-            attrs = re.compile('[\w\\.-]+').findall(line)
+            attrs = DOMAIN_RE.findall(line)
             if not attrs or len(attrs) == 0 or host not in attrs[1:]:
                 content += line
                 continue
@@ -157,6 +177,7 @@ def flush_hosts():
 
 
 if __name__ == '__main__':
-    # switch_by_num()
-    host_to('m.liepin.com')
-    host_to('m.liepin.com', '123.123.1.1')
+    switch_by_num()
+    host_to('baidu.com')
+    host_to('m.baidu.com', '123.123.1.1')
+

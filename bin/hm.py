@@ -7,9 +7,12 @@
 
 import os
 import time
+import re
 from optparse import OptionParser, OptionGroup
 
-from hosts import backup, switch_by_num, host_to
+import sys
+
+from hosts import backup, switch_by_num, host_to, get_config, IP_RE, DOMAIN_RE
 from remote import download_remote_env
 from configs import configs as cfs
 
@@ -47,12 +50,12 @@ def main():
                          default=cur_time, help="备份名称，默认为当前时间")
     parser.add_option_group(group_bak)
 
-    # 切换环境
     parser.add_option("-L", "--list", action="store_false", default=True,
                       dest="show_list", help="可选环境列表")
-    # 备份命令组
-    parser.add_option("-s", "--switch", action="store", type='int',
-                            dest="switch", help="切换环境，需要管理员权限，默认会备份当前host")
+
+    # 切换环境
+    parser.add_option("-s", "--switch", action="store", type='string', default='',
+                      dest="switch", help="切换环境，需要管理员权限，默认会备份当前host")
 
     parser.add_option('-i', '--ignore', action='store', type='string', default='',
                       dest="ignore", help="切换环境，需要忽略的内容")
@@ -62,13 +65,13 @@ def main():
     # 下载环境
     parser.add_option("-d", "--download", action="store_true", default=False,
                       dest="download", help="下载环境", metavar="FILE")
-    # 本地环境列表
-    parser.add_option("-l", "--local", action="store", dest="local",
-                      help="切换域名至本地")
-    parser.add_option("--ip", action="store", dest="ip", default='127.0.0.1',
+
+    parser.add_option("-c", "--current", action="store", dest="current",
+                      help="当前配置")
+    parser.add_option("--ip", action="store", dest="ip", default=None,
                       help="指定IP地址")
     # 版本
-    parser.add_option("-V", "--version", action="store_false", dest="verbose", default=True,
+    parser.add_option("-V", "--version", action="store_false", dest="verbose", default=False,
                       help="显示版本")
     parser.add_option("--config", action="store_true", dest="show_configs", default=False,
                       help="显示版本")
@@ -83,24 +86,64 @@ def main():
         for k, v in cfs.items():
             print('   ', k, '=', v)
 
+    if options.show_list:
+        show_list('可选环境有：', os.path.join(cfs.work_path, cfs.env_path)),
+        show_list('可恢复备份有：', os.path.join(cfs.work_path, cfs.backup_path))
+
     # 备份环境
     if options.backup or cfs.auto_backup:
-        backup(options.backupname, os.path.join(cfs.work_path, cfs.backup_path))
+        backup(options.backupname, os.path.join(
+            cfs.work_path, cfs.backup_path))
 
     # 切换环境
     if options.switch:
-        switch_by_num(options.switch, options.ignore)
+        # print("re.match(r'[0-9]+', options.switch=" + re.match(r'[0-9]+', options.switch))
+        if re.match(r'[0-9]+', options.switch):
+            switch_by_num(int(options.switch), options.ignore)
+        elif DOMAIN_RE.match(options.switch) and not options.ip:
+            # 列出可选IP，默认为本地
+            ips = get_config(options.switch)
+            if len(ips) == 0:
+                print("请输入IP，不输入为本地IP")
+            else:
+                ip_i = 0
+                for ip in ips:
+                    msg = str(ip_i) + "：" + ip
+                    if ip_i == 0:
+                        msg += '[当前]'
+                    print(msg)
+                    ip_i += 1
+                print("请选择IP，或者输入自定义IP，不输入为本地IP")
 
-    if options.local:
-        host_to(options.local, options.ip)
+            input_ip = sys.stdin.readline().strip()
+            if not input_ip or '' == input_ip:
+                host_to(options.switch)
+            elif IP_RE.match(input_ip):
+                host_to(options.switch, input_ip)
+            elif re.match(r'[0-9]+', input_ip) and int(input_ip) < len(ips):
+                host_to(options.switch, ips[int(input_ip)])
+            else:
+                raise Exception('参数错误，请输入可选IP序号或者正确的IP')
 
-    if options.show_list:
-        show_list('可选环境如下', os.path.join(cfs.work_path, cfs.env_path)),
-        show_list('可恢复备份如下', os.path.join(cfs.work_path, cfs.backup_path))
+        elif DOMAIN_RE.match(options.switch) and options.ip:
+            host_to(options.local, options.ip)
+        else:
+            raise Exception('参数错误，请输入可选环境序号或者域名')
+
+    if options.current:
+        ips = get_config(options.current)
+        ip_i = 0
+        for ip in ips:
+            print(str(ip_i) + "：" + ip)
+            ip_i += 1
 
     if options.download:
-        download_remote_env(cfs.remote_env, os.path.join(cfs.work_path, cfs.env_path))
+        download_remote_env(cfs.remote_env, os.path.join(
+            cfs.work_path, cfs.env_path))
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(e)

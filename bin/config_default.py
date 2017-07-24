@@ -10,7 +10,7 @@ import os
 __author__ = 'Small Cold'
 
 configs = {
-    "version": "1.0.0",
+    "version": "1.0.1",
     'work_path': os.path.join(os.path.expanduser('~'), '.hosts'),
     'env_path': 'environments',
     'backup_path': 'backup',
