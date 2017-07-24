@@ -12,7 +12,7 @@ from optparse import OptionParser, OptionGroup
 
 import sys
 
-from hosts import backup, switch_by_num, host_to, get_config, IP_RE, DOMAIN_RE
+from hosts import backup, switch_by_num, host_to, get_config, IP_RE, DOMAIN_RE, Host
 from remote import download_remote_env
 from configs import configs as cfs
 
@@ -125,7 +125,7 @@ def main():
                 host_to(options.switch)
             elif IP_RE.match(input_ip):
                 host_to(options.switch, input_ip)
-            elif re.match(r'[0-9]+', input_ip) and int(input_ip) < len(ips):
+            elif re.match(r'^[0-9]+$', input_ip) and int(input_ip) < len(ips):
                 host_to(options.switch, ips[int(input_ip)])
             else:
                 raise Exception('参数错误，请输入可选IP序号或者正确的IP')
@@ -148,7 +148,8 @@ def main():
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except Exception as e:
-        print(e)
+    main()
+    # try:
+    #     main()
+    # except Exception as e:
+    #     print(e)
