@@ -105,7 +105,7 @@ class Host(object):
         if len(self.get_domain()) > 0 and domain in self.get_domain():
             if ip != self.get_ip():
                 if len(self.get_domain()) == 1:
-                    self.enable = not self._enable
+                    self.enable = False
                 else:
                     self.get_domain().remove(domain)
                     return [Host(domain, ip), self]
